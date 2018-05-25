@@ -1,2 +1,0 @@
-# log-tracer
-UniTN project 
