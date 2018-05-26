@@ -28,7 +28,7 @@ char* format_tokenize(char* old_format){
 	char ctrl[9]="--format";
 	char c[2] = "=";
 	new_format = strtok(old_format, c);
-	if(!strcmp(new_format,ctrl)){
+	if(strcmp(new_format,ctrl)==0){
 		new_format = strtok(NULL, c);
 		return new_format;
 	}
