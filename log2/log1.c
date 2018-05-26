@@ -31,7 +31,7 @@ void EndTime () {
   int fd[2];
   char* start_str = "Start time = ";
   char* end_str = "End time = ";
-  char* time_spent_str = "Time spent processing: ";
+  char* time_spent_str = "Time spent processing = ";
   //mi viene passato il path del file di output
   int path = open ("/tmp/path", O_RDONLY);
   char c_path[MAX];
@@ -42,19 +42,57 @@ void EndTime () {
   read(value, c_value, 2);
   //stampo i dati nel file di output
   fd[0] = open(c_path , O_WRONLY | O_APPEND | O_CREAT, 0777);
-  write(fd[0], start_str, strlen(start_str));
-  write(fd[0], buf, strlen(buf));
-  write(fd[0], "\n", 1);
-  write(fd[0], end_str, strlen(end_str));
-  write(fd[0], buf2, strlen(buf2));
-  write(fd[0], "\n", 1);
-  write(fd[0], time_spent_str, strlen(time_spent_str));
-  write(fd[0], buftot, strlen(buftot));
-  write(fd[0], "\n", 1);
-  write(fd[0], value_str, strlen(value_str));
-  write(fd[0], c_value, strlen(c_value));// **QUESTO NON VA**
-  close(fd[0]);
-  exit(0);
+  int lung = strlen(c_path);
+  char format[4] = {c_path[lung-3], c_path[lung-2], c_path[lung-1], 0};
+  if(strcmp(format,"txt")) {
+    write(fd[0], start_str, strlen(start_str));
+    write(fd[0], buf, strlen(buf));
+    write(fd[0], "\n", 1);
+    write(fd[0], end_str, strlen(end_str));
+    write(fd[0], buf2, strlen(buf2));
+    write(fd[0], "\n", 1);
+    write(fd[0], time_spent_str, strlen(time_spent_str));
+    write(fd[0], buftot, strlen(buftot));
+    write(fd[0], "\n", 1);
+    write(fd[0], value_str, strlen(value_str));
+    write(fd[0], c_value, strlen(c_value));
+    close(fd[0]);
+    exit(0);
+  }else if(strcmp(format,"csv")){
+    write(fd[0], start_str, strlen(start_str));
+    write(fd[0], buf, strlen(buf));
+    write(fd[0], ";\\n\n", 5);
+    write(fd[0], end_str, strlen(end_str));
+    write(fd[0], buf2, strlen(buf2));
+    write(fd[0], ";\\n\n", 5);
+    write(fd[0], time_spent_str, strlen(time_spent_str));
+    write(fd[0], buftot, strlen(buftot));
+    write(fd[0], ";\\n\n", 5);
+    write(fd[0], value_str, strlen(value_str));
+    write(fd[0], c_value, strlen(c_value));
+    write(fd[0], "\\n", 3);
+    close(fd[0]);
+    exit(0);
+  }else if(strcmp(format,"xml")){
+    write(fd[0], "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n", MAX);
+    write(fd[0], "<Start time>", 20);
+    write(fd[0], buf, strlen(buf));
+    write(fd[0], "</Start time>\n", 20);
+    write(fd[0], "<End time>", 20);
+    write(fd[0], buf2, strlen(buf2));
+    write(fd[0], "</End time>\n", 20);
+    write(fd[0], "<Time spent processing>", 30);
+    write(fd[0], buftot, strlen(buftot));
+    write(fd[0], "</Time spent processinge>\n", 30);
+    write(fd[0], "<Value>", 20);
+    write(fd[0], c_value, strlen(c_value));
+    write(fd[0], "</Value>", 20);
+    close(fd[0]);
+    exit(0);
+  }else {
+    printf("Formato non supportato\n");
+  }
+  
 }
 
 int main () {
