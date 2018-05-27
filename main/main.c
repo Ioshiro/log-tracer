@@ -5,7 +5,8 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/wait.h>
-#define MAX 5
+#include "log.h"
+#define MAX_DIM 5
 #define READ 0
 #define WRITE 1
 
@@ -45,7 +46,6 @@ void path_write(char* path){
 	int fd[2];
 	remove("/tmp/path.tmp");
 	fd[0] = open("/tmp/path.tmp", O_WRONLY | O_CREAT, 0777);
-	printf("pats is=%s\n",path);
 	write(fd[0], path, strlen(path));
   close(fd[0]);
 }
@@ -61,7 +61,7 @@ void r_value_write(char* argv){
 	int r = WEXITSTATUS(system(argv));
 	int fd[2];
 	fd[0]= open("/tmp/rvalue.tmp", O_WRONLY | O_CREAT, 0777);
-	char r_value[MAX];
+	char r_value[MAX_DIM];
 	sprintf(r_value, "%i \n", r);
 	write(fd[0], r_value, strlen(r_value));
 	close(fd[0]);
@@ -86,72 +86,82 @@ int pipe_check (char* command){
 }
 
 void pipe_tokenize(char* pipeline){
-	char c[2] = "|";
-	printf("pipeline : %s\n", pipeline);
+	char c[2] = "|"; //using standart delim char for pipe
 	pipe_toks[0] = strtok(pipeline,c);
 	pipe_toks[1] = strtok(NULL,c);
-	printf("%s\n", pipe_toks[0]);
-	printf("%s\n", pipe_toks[1]); }
-
+	return;
+}
 
 int main (int argc, char** argv) {
+	//Syntax control
 	if (argc!=4){
-		perror("Sinstassi errata. La sintassi corretta e': ./run --pathfile=path --format=frmt comandi");
+		perror("Sinstassi errata. La sintassi corretta e': ./run --logfile=path --format=frmt comandi");
 		exit(EXIT_FAILURE);
 	}
 
-	int pid_log = open("/tmp/logpid.tmp", O_RDONLY);
-	char c_log[MAX];
+	//Creating the logger process
+	if(fork()== 0)
+	go_to_log();
+	else{
+
+	char c_log[MAX_DIM];
 	char* path_tok;
 	char* format_tok;
 
-	read(pid_log, c_log, MAX);
+	//Reading pid from log.c /tmp file
+	int pid_log = open("/tmp/logpid.tmp", O_RDONLY);
+	read(pid_log, c_log, MAX_DIM);
 	close(pid_log);
 	int pid = atoi(c_log);
-	printf("%i\n",pid);
 
-
+	//Reading, tokenizing and writing in /tmp path and format arguments
 	path_tok = path_tokenize(argv[1]);
 	path_write(path_tok);
+	remove(path_tok);
 	format_tok = format_tokenize(argv[2]);
 	format_write(format_tok);
-	printf("Tok1: %s \n",path_tok);
-	printf("Tok2: %s \n",format_tok);
-	remove(path_tok);
-	printf("path_tok = %s\n", path_tok);
 
+	//Control for pipe and eventual execution
 	int cpipe = pipe_check(argv[3]);
 		if(cpipe == 0){
-			printf("Solo-run! \n");
-			kill(pid, SIGUSR1);
+			//One command execution
+			//kill(pid, SIGUSR1);	//Calling start time
+			start_time();
 			r_value_write(argv[3]);
 			command_write(argv[3]);
-			kill(pid, SIGUSR2);
+			end_time();
+			//kill(pid, SIGUSR2);	//Calling final time and write log
 		}
 		else{
-			printf("Wombo-combo! \n");
+			//Pipe command execution
 			pipe_tokenize(argv[3]);
 			int pipex[2];
 			pipe(pipex);
 			if (fork() == 0) {
+				//Pipe-write side
 				close(pipex[READ]);
 				dup2(pipex[WRITE],1);
-				kill(pid, SIGUSR1);
+				//kill(pid, SIGUSR1); //Calling start time
+				start_time();
 				r_value_write(pipe_toks[0]);
 				command_write(pipe_toks[0]);
+				end_time();
 				close(pipex[WRITE]);
-				kill(pid, SIGUSR2);
+				//kill(pid, SIGUSR2); //Calling final time and write log
 			}else{
+				//Pipe-read side
 				wait(NULL);
 				close(pipex[WRITE]);
 				dup2(pipex[READ],0);
-				kill(pid, SIGUSR1);
+				//kill(pid, SIGUSR1); //Calling start time
+				start_time();
 				r_value_write(pipe_toks[1]);
 				command_write(pipe_toks[1]);
+				end_time();
 				close(pipex[READ]);
-				kill(pid, SIGUSR2);
+				//kill(pid, SIGUSR2); //Calling final time and write log
 			}
 		}
-
+	}
 	exit(EXIT_SUCCESS);
 }
