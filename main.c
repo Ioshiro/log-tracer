@@ -93,13 +93,87 @@ void pipe_tokenize(char* pipeline){
 	printf("%s\n", pipe_toks[0]);
 	printf("%s\n", pipe_toks[1]); }
 
+int filecheck() {
+	char filename[15] = "/tmp/logpid.tmp";
+	int find = 0;
+	if (!access(filename,F_OK)) {
+		find = 1;
+	}
+	return find;
+}
+
+
 
 int main (int argc, char** argv) {
-	if (argc!=4){
+	if (argc!=4) {
 		perror("Sinstassi errata. La sintassi corretta e': ./run --pathfile=path --format=frmt comandi");
 		exit(EXIT_FAILURE);
 	}
+	int g = filecheck();
+	printf("Il risultato del check e' = %i\n", g);
+	if (g == 0) {
+		pid_t pid1 = fork();
+		if (pid1 == 0) {
+			printf("sono entrato nel figlio\n");
+			char *const paramlist[] = {"/home/ale/Documenti/log.c", NULL};
+			execv("/home/ale/Documenti/log.c", paramlist);
+		}else {
+		int pid_log = open("/tmp/logpid.tmp", O_RDONLY);
+		char c_log[MAX];
+		char* path_tok;
+		char* format_tok;
 
+		read(pid_log, c_log, MAX);
+		close(pid_log);
+		int pid = atoi(c_log);
+		printf("%i\n",pid);
+
+		path_tok = path_tokenize(argv[1]);
+		path_write(path_tok);
+		format_tok = format_tokenize(argv[2]);
+		format_write(format_tok);
+		printf("Tok1: %s \n",path_tok);
+		printf("Tok2: %s \n",format_tok);
+		remove(path_tok);
+		printf("path_tok = %s\n", path_tok);
+
+		int cpipe = pipe_check(argv[3]);
+			if(cpipe == 0){
+				printf("Solo-run! \n");
+				kill(pid, SIGUSR1);
+				r_value_write(argv[3]);
+				command_write(argv[3]);
+				kill(pid, SIGUSR2);
+				kill(pid,SIGINT);
+			}
+			else{
+				printf("Wombo-combo! \n");
+				pipe_tokenize(argv[3]);
+				int pipex[2];
+				pipe(pipex);
+				if (fork() == 0) {
+					close(pipex[READ]);
+					dup2(pipex[WRITE],1);
+					kill(pid, SIGUSR1);
+					r_value_write(pipe_toks[0]);
+					command_write(pipe_toks[0]);
+					close(pipex[WRITE]);
+					kill(pid, SIGUSR2);
+					kill(pid,SIGINT);
+				}else{
+					wait(NULL);
+					close(pipex[WRITE]);
+					dup2(pipex[READ],0);
+					kill(pid, SIGUSR1);
+					r_value_write(pipe_toks[1]);
+					command_write(pipe_toks[1]);
+					close(pipex[READ]);
+					kill(pid, SIGUSR2);
+					kill(pid,SIGINT);
+				}
+			}
+		}
+	}else {
 	int pid_log = open("/tmp/logpid.tmp", O_RDONLY);
 	char c_log[MAX];
 	char* path_tok;
@@ -152,6 +226,6 @@ int main (int argc, char** argv) {
 				kill(pid, SIGUSR2);
 			}
 		}
-
+	}
 	exit(EXIT_SUCCESS);
 }

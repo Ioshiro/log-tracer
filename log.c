@@ -128,6 +128,11 @@ void end_time () {
   return;
 }
 
+void check () {
+	remove(/tmp/logpid.tmp);
+	exit (0);
+}
+
 int main () {
         //invio il pid al main e aspetto che mi risponda
 	pid_t pid;
@@ -145,6 +150,7 @@ int main () {
 	signal(SIGUSR1, start_time);
 	//calcolo il tempo finale quando il main mi "sveglia"
 	signal(SIGUSR2, end_time);
+	signal(SIGINT,check);
 	//dormo aspettando il main
 	while (1)
 		sleep(1);
