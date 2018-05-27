@@ -36,7 +36,6 @@ void end_time () {
   int command = open ("/tmp/command.tmp", O_RDONLY);
   int j = read (command, c_command, MAX);
   c_command[j] = 00;
-  close (command);
   int d_format = open("/tmp/format.tmp", O_RDONLY);
   char format[MAX];
   read (d_format, format, 3);
@@ -44,15 +43,19 @@ void end_time () {
   format[3]=00;
   tend = time(NULL);
   double ttot = difftime(tend,tstart);
+  int ttotint = (int) ttot;
+  printf("ttotint e' = %i\n", ttotint);
   strftime(buf,20,"%Y-%m-%d %H:%M:%S",localtime(&tstart));
   strftime(buf2,20,"%Y-%m-%d %H:%M:%S",localtime(&tend));
-  snprintf(buftot,20, "%f", ttot);
+  snprintf(buftot,20, "%i", ttotint);
   //mi viene passato il path del file di output
   int path = open("/tmp/path.tmp", O_RDONLY);
   int i = read(path,c_path,MAX);
   printf("Primo i = %i \n", i);
   c_path[i] = 00;
   printf("Ho letto cosi': %s \n",format);
+  printf("il path e' :%s\n",c_path);
+  //remove(c_path);
   close(path);
   int value = open("/tmp/rvalue.tmp", O_RDONLY);
   read(value, c_value, 2);
@@ -60,7 +63,8 @@ void end_time () {
   close(value);
   printf("Ho letto value: %s \n",c_value);
     //stampo i dati nel file di output
-  fd[0] = open(c_path , O_WRONLY | O_CREAT, 0777);
+  //remove(c_path);
+  fd[0] = open(c_path , O_WRONLY | O_CREAT | O_APPEND, 0777);
   if(strcmp(format,"txt") == 0) {
     write(fd[0], command_str, strlen(command_str));
     write(fd[0], c_command, j);
@@ -128,10 +132,12 @@ int main () {
         //invio il pid al main e aspetto che mi risponda
 	pid_t pid;
 	pid = getpid();
+	printf("my pid is %i\n", pid);
 	char c_pid [MAX];
 	sprintf(c_pid, "%i", pid);
 
-	int pid_log = open("/tmp/log.tmp", O_WRONLY | O_CREAT, 0777);
+	remove ("/tmp/logpid.tmp");
+	int pid_log = open("/tmp/logpid.tmp", O_WRONLY | O_CREAT, 0777);
 	write(pid_log, c_pid, strlen(c_pid));
 	close(pid_log);
 
